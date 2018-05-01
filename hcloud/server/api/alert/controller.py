@@ -2,30 +2,46 @@ import os
 from hcloud.exceptions import Error
 from hcloud.task.alert import push_alert
 from hcloud.models.alert_rules import AlertRulesData
+from hcloud.models.alerts import AlertsData
+from hcloud.config import YML_LOCATION, RULES_LOCATION
 
-YML_LOCATION = '/tmp/yaml_files/'
-RULES_LOCATION = '/opt/monitor/server/rules/'
 
 class AlertManager(object):
     @classmethod
-    def send(cls, alertinfo):
-        print alertinfo
+    def send_alert(cls, monitor_iterm, summary, description, contact_groups):
+        status = 0
+        return status
+
+    @classmethod
+    def create_alert(cls, *add):
+        alert_rules_id, host_id, service, monitor_items, alert_time, current_value, last_time, state, contact_groups, status = add
+        rs = AlertsData.add(alert_rules_id, host_id, service, monitor_items, alert_time,
+                                current_value, last_time, state, contact_groups, status)
+        return rs
 
     @classmethod
     def create_alert_rules(cls, *add):
-        alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, status = add
-        rs = AlertRulesData.add(alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, status)
+        alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status = add
+        rs = AlertRulesData.add(alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status)
         return rs
 
     @classmethod
     def update_alert_rules(cls, *update):
-        alert_rules_id, statistical_period, statistical_approach, compute_mode, threshold_value = update
-        rs = AlertRulesData.update(alert_rules_id,statistical_period, statistical_approach, compute_mode, threshold_value)
+        alert_rules_id, statistical_period, statistical_approach, compute_mode, threshold_value, contact_groups, notify_type = update
+        rs = AlertRulesData.update(alert_rules_id,statistical_period, statistical_approach, compute_mode, threshold_value, contact_groups, notify_type)
         return rs
 
     @classmethod
     def get_alert_rules(cls, alert_rules_id):
         rs = AlertRulesData.get_alert_rules(alert_rules_id)
+        if rs:
+            return [line.dump() for line in rs]
+        else:
+            return
+
+    @classmethod
+    def get_alert_rules_by_name(cls, monitor_items):
+        rs = AlertRulesData.get_alert_rules_by_name(monitor_items)
         if rs:
             return [line.dump() for line in rs]
         else:
@@ -84,6 +100,7 @@ class Ansible(object):
         fobj.write("    threshold_value: {0}\n".format(threshold_value))
         fobj.write("    statistical_period: '{0}'\n".format(statistical_period))
         fobj.write("    compute_mode: '{0}'\n".format(compute_mode))
+        fobj.write("    current_value: {{$value}}")
         fobj.write("  tasks:\n")
         yml_rules_path = os.path.abspath("hcloud/server/api/alert/files/")
         yml_rules_rec = service + "_" + metrics + ".yml"
