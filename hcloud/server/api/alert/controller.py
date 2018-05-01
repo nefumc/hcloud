@@ -21,8 +21,8 @@ class AlertManager(object):
 
     @classmethod
     def create_alert_rules(cls, *add):
-        alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status = add
-        rs = AlertRulesData.add(alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status)
+        alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status = add
+        rs = AlertRulesData.add(alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status)
         return rs
 
     @classmethod

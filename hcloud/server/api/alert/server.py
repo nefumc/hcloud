@@ -1,4 +1,5 @@
 import uuid
+import os
 from flask_restful import Resource, marshal_with
 from flask import request
 from hcloud.server.api.alert.controller import AlertManager
@@ -6,8 +7,15 @@ from hcloud.server.api.alert.controller import Ansible
 from hcloud.exceptions import Error
 from hcloud.exceptions import ModelsDBError
 from .views import AlertRulesViews
+from envcfg.json.hcloud import ALERT_MANAGER_PATH
+from envcfg.json.hcloud import ALERT_MANAGER_URL
+from envcfg.json.hcloud import RULES_LOCATION
+from hcloud.config import MONITOR_SERVER_URL
+from hcloud.utils import execute_command
+from hcloud.libs import monitor
 
 class SendToAlert(Resource):
+
    def post(self):
        try:
            json_data = request.get_json(force=True)
@@ -36,6 +44,9 @@ class SendToAlert(Resource):
        return {'status': 'ok'}, 201
 
 class CreateAlertRules(Resource):
+
+    alert_rules_data_fields = AlertRulesViews.alert_rules_data_fields
+    alert_rules_parser = AlertRulesViews.parser
 
     def post(self):
         args = AlertRules.alert_rules_parser.parse_args()
@@ -70,7 +81,6 @@ class AlertRules(Resource):
 
     alert_rules_data_fields = AlertRulesViews.alert_rules_data_fields
 
-
     @marshal_with(alert_rules_data_fields)
     def get(self, alert_rules_id):
         try:
@@ -94,11 +104,49 @@ class AlertRules(Resource):
                                                            compute_mode, threshold_value, contact_groups, notify_type)
             except Exception as e:
                 raise Error(str(e))
-            return {'status': 'ok'}, 201
         elif action['method'] == 'disable':
-            pass
+            try:
+                data_res = AlertManager.get_alert_rules(alert_rules_id)
+                alert_name = data_res['service'] + '_' +  data_res['monitor_items'] + '_' + data_res['host_id'] + ':' +  data_res['port']
+
+                silence_add = "{0}/amtool --alertmanager.url={1} silence add alertname={2}".format(ALERT_MANAGER_PATH, ALERT_MANAGER_URL, alert_name)
+                status, output, err = execute_command(silence_add)
+                if status != 0 or output == None:
+                    errmsg = "Execute silence add command error: %s" % err
+                    raise Error(str(errmsg))
+            except Exception as e:
+                raise Error(str(e))
         elif action['method'] == 'enable':
-            pass
+            data_res = AlertManager.get_alert_rules(alert_rules_id)
+            alert_name = data_res['service'] + '_' + data_res['monitor_items'] + '_' + data_res['host_id'] + ':' + data_res['port']
+            silence_query = "{0}/amtool --alertmanager.url={1} silence query alertname={2}".format(ALERT_MANAGER_PATH, ALERT_MANAGER_URL, alert_name)
+            status, output, err = execute_command(silence_query)
+            if status != 0 or output == None:
+                errmsg = "Execute silence query command error: %s" % err
+                raise Error(str(errmsg))
+            for line in output.split("\n"):
+                if line == None or line == "":
+                    continue
+                if line.find('Matchers') == -1 or line.find('Comment') == -1:
+                    continue
+                else:
+                    id = line.split(' ')[0]
+            silence_expire = "{0}/amtool --alertmanager.url={1} silence expire {2}".format(ALERT_MANAGER_PATH, ALERT_MANAGER_URL, id)
+            status, output, err = execute_command(silence_expire)
+            if status != 0 or output == None:
+                errmsg = "Execute silence expire command error: %s" % err
+                raise Error(str(errmsg))
+        return {'status': 'ok'}, 201
+
+    def delete(self, alert_rules_id):
+        try:
+            data_res = AlertManager.get_alert_rules(alert_rules_id)
+            file_name = data_res['host_id'] + '_' + data_res['port'] + '_' + data_res['service'] + '_' + data_res['monitor_items'] + '.yml'
+            file_path = RULES_LOCATION + '/' + file_name
+            os.remove(file_path)
+            monitor.reload(MONITOR_SERVER_URL)
+        except Exception as e:
+            raise Error(str(e))
         return {'status': 'ok'}, 201
 
 

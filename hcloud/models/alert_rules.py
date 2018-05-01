@@ -3,11 +3,12 @@ class AlertRulesData(object):
     _table_ar = 'alert_rules'
 
     def __init__(
-            self, id_, alert_rules_id, host_id, service, monitor_items, statistical_period,
+            self, id_, alert_rules_id, host_id, port, service, monitor_items, statistical_period,
             statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status, deleted, deleted_time,create_time, update_time):
         self.id_ = str(id_)
         self.alert_rules_id = alert_rules_id
         self.host_id = host_id
+        self.port = port
         self.service = service
         self.monitor_items = monitor_items
         self.statistical_period = statistical_period
@@ -28,6 +29,7 @@ class AlertRulesData(object):
             id = self.id_,
             alert_rules_id = self.alert_rules_id,
             host_id = self.host_id,
+            port=self.port,
             service = self.service,
             monitor_items = self.monitor_items,
             statistical_period = self.statistical_period,
@@ -67,13 +69,14 @@ class AlertRulesData(object):
         return line if line else ''
 
     @classmethod
-    def add(cls, alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status):
+    def add(cls, alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status):
         sql = ("insert into {table} "
-               "(alert_rules_id, host_id, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status) values "
-               "(:alert_rules_id, :host_id, :service, :monitor_items, :statistical_period, "
+               "(alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status) values "
+               "(:alert_rules_id, :host_id, :port, :service, :monitor_items, :statistical_period, "
                ":statistical_approach, :compute_mode, :threshold_value, :silence_time, :contact_groups, :notify_type, :status)").format(table=cls._table_ar)
         params = dict(
             host_id=host_id,
+            port=port,
             alert_rules_id=alert_rules_id,
             service=service,
             monitor_items=monitor_items,

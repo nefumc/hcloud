@@ -8,6 +8,7 @@ class AlertRulesViews(object):
     alert_rules_data_fields = {}
     alert_rules_data_fields['alert_rules_id'] = fields.String(attribute='alert_rules_id')
     alert_rules_data_fields['host_id'] = fields.String(attribute='host_id')
+    alert_rules_data_fields['port'] = fields.String(attribute='port')
     alert_rules_data_fields['service'] = fields.String(attribute='service')
     alert_rules_data_fields['monitor_items'] = fields.String(attribute='monitor_items')
     alert_rules_data_fields['statistical_period'] = fields.String(attribute='statistical_period')
