@@ -8,4 +8,4 @@ groups:
         service: node
     annotations:
         summary: "High Memory usage detected"
-        description: "current value is={{ current_value }}"
+        description: "current value is = {{'{{'}}$value{{'}}'}}"

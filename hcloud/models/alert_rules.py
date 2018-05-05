@@ -1,4 +1,5 @@
 from hcloud.libs.db.mysql import db
+
 class AlertRulesData(object):
     _table_ar = 'alert_rules'
 
@@ -49,31 +50,52 @@ class AlertRulesData(object):
     @classmethod
     def get_alert_rules(cls, alert_rules_id):
         sql = (
-            " select host_id, service, monitor_items, statistical_period,"
-            " statistical_approach, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status"
-            " from {table} where alert_rules_id := alert_rules_id ").format(table=cls._table_ar)
+            " select id, alert_rules_id, host_id, port, service, monitor_items, statistical_period,"
+            " statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status, deleted, deleted_time, create_time, update_time"
+            " from {table} where alert_rules_id = :alert_rules_id and deleted = 0").format(table=cls._table_ar)
         params = dict(alert_rules_id=alert_rules_id)
         line = db.execute(sql, params=params).fetchone()
         db.commit()
         return line if line else ''
 
     @classmethod
+    def get_alert_rules_list(cls):
+        sql = (
+            " select id, alert_rules_id, host_id, port, service, monitor_items, statistical_period,"
+            " statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status, deleted, deleted_time, create_time, update_time"
+            " from {table} where deleted = 0").format(table=cls._table_ar)
+        rs = db.execute(sql).fetchall()
+        db.commit()
+        return [cls(*line) for line in rs] if rs else []
+
+    @classmethod
+    def show_alert_rules(cls, alert_rules_id):
+        sql = (
+            " select id, alert_rules_id, host_id, port, service, monitor_items, statistical_period,"
+            " statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status, deleted, deleted_time, create_time, update_time"
+            " from {table} where alert_rules_id = :alert_rules_id and deleted = 0").format(table=cls._table_ar)
+        params = dict(alert_rules_id=alert_rules_id)
+        rs = db.execute(sql, params=params).fetchall()
+        db.commit()
+        return [cls(*line) for line in rs] if rs else []
+
+    @classmethod
     def get_alert_rules_by_name(cls, monitor_items):
         sql = (
-            " select host_id, service, monitor_items, statistical_period,"
-            " statistical_approach, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status"
-            " from {table} where monitor_items := monitor_items ").format(table=cls._table_ar)
+            " select id, alert_rules_id, host_id, port, service, monitor_items, statistical_period,"
+            " statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status, deleted, deleted_time, create_time, update_time"
+            " from {table} where monitor_items = :monitor_items and deleted = 0").format(table=cls._table_ar)
         params = dict(monitor_items=monitor_items)
         line = db.execute(sql, params=params).fetchone()
         db.commit()
         return line if line else ''
 
     @classmethod
-    def add(cls, alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status):
+    def add(cls, alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, contact_groups, notify_type, status):
         sql = ("insert into {table} "
-               "(alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status) values "
+               "(alert_rules_id, host_id, port, service, monitor_items, statistical_period, statistical_approach, compute_mode, threshold_value, contact_groups, notify_type, status) values "
                "(:alert_rules_id, :host_id, :port, :service, :monitor_items, :statistical_period, "
-               ":statistical_approach, :compute_mode, :threshold_value, :silence_time, :contact_groups, :notify_type, :status)").format(table=cls._table_ar)
+               ":statistical_approach, :compute_mode, :threshold_value, :contact_groups, :notify_type, :status)").format(table=cls._table_ar)
         params = dict(
             host_id=host_id,
             port=port,
@@ -84,7 +106,6 @@ class AlertRulesData(object):
             statistical_approach=statistical_approach,
             compute_mode=compute_mode,
             threshold_value=threshold_value,
-            silence_time=silence_time,
             contact_groups=contact_groups,
             notify_type=notify_type,
             status=status)
@@ -95,20 +116,18 @@ class AlertRulesData(object):
         db.rollback()
 
     @classmethod
-    def update(cls, alert_rules_id, statistical_period, statistical_approach, compute_mode, threshold_value, silence_time, contact_groups, notify_type, status):
-        sql = ("update {table} set "
-               "statistical_period=:statistical_period, statistical_approach=:statistical_approach, compute_mode=:compute_mode, threshold_value=:threshold_value, silence_time=:silence_time, contact_groups=:contact_groups, notify_type=:notify_type, status=:status"
-               "where alert_rules_id = :alert_rules_id").format(table=cls._table_ar)
+    def update(cls, alert_rules_id, statistical_period, compute_mode, threshold_value, contact_groups, notify_type):
+        sql = (
+        "update {table} set statistical_period=:statistical_period, compute_mode=:compute_mode, threshold_value=:threshold_value, contact_groups=:contact_groups, notify_type=:notify_type where alert_rules_id = :alert_rules_id and deleted = 0").format(
+            table=cls._table_ar)
+
         params = dict(
             statistical_period=statistical_period,
-            statistical_approach=statistical_approach,
             compute_mode=compute_mode,
             threshold_value=threshold_value,
-            silence_time=silence_time,
             contact_groups=contact_groups,
             notify_type=notify_type,
-            alert_rules_id=alert_rules_id,
-            status = status)
+            alert_rules_id=alert_rules_id)
         r = db.execute(sql, params=params)
         if r.lastrowid:
             db.commit()
@@ -117,10 +136,27 @@ class AlertRulesData(object):
 
     @classmethod
     def update_status(cls, alert_rules_id, status):
-        sql = ("update {table} set status=:status where alert_rules_id = :alert_rules_id").format(table=cls._table_ar)
+        sql = ("update {table} set status=:status where alert_rules_id = :alert_rules_id and deleted = 0").format(table=cls._table_ar)
         params = dict(
             alert_rules_id=alert_rules_id,
             status = status)
+        db.execute(sql, params=params)
+        db.commit()
+
+    @classmethod
+    def update_silence_time(cls, alert_rules_id, silence_time):
+        sql = ("update {table} set silence_time=:silence_time where alert_rules_id = :alert_rules_id and deleted = 0").format(table=cls._table_ar)
+        params = dict(
+            alert_rules_id=alert_rules_id,
+            silence_time=silence_time)
+        db.execute(sql, params=params)
+        db.commit()
+
+    @classmethod
+    def delete_alert_rule(cls, alert_rules_id):
+        sql = ("update {table} set deleted = 1 where alert_rules_id = :alert_rules_id and deleted = 0").format(table=cls._table_ar)
+        params = dict(
+            alert_rules_id=alert_rules_id)
         db.execute(sql, params=params)
         db.commit()
 
